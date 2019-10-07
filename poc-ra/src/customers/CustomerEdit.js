@@ -24,7 +24,7 @@ import {
 import { change } from 'redux-form';
 import { AvatarField } from './AvatarField';
 
-import GeoInput from './AutocompleteAddress';
+import AutocompleteAddress from './AutocompleteAddress';
 
 const CustomLastNameField = ({ last_name, first_name }) => (
     <div>{`Computed name: ${first_name} ${last_name}`}</div>
@@ -141,7 +141,7 @@ export const CustomerEdit = props => (
                 <QueryUserProfile />
             </FormTab>
             <FormTab label="Address">
-                <GeoInput />
+                <AutocompleteAddress />
                 {/*    <TextInput source="address" />*/}
                 {/*<TextInput source="zipcode" />*/}
                 <TextInput source="city" />

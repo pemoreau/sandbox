@@ -5,25 +5,26 @@ import { withStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Paper from '@material-ui/core/Paper';
 import MenuItem from '@material-ui/core/MenuItem';
-import { fetchUtils, FormDataConsumer, Labeled, REDUX_FORM_NAME } from 'react-admin';
+import { fetchUtils, FormDataConsumer, REDUX_FORM_NAME } from 'react-admin';
 import useDebounce from './useDebounce';
 import { change } from 'redux-form';
 
 const queryString = require('query-string');
 
 const renderInput = ({ InputProps, classes, ref, ...other }) => (
-    <Labeled label="Adresse">
-        <TextField
-            InputProps={{
-                inputRef: ref,
-                classes: {
-                    root: classes.inputRoot,
-                },
-                ...InputProps,
-            }}
-            {...other}
-        />
-    </Labeled>
+    <TextField
+        label="Adresse"
+        placeholder="Placeholder"
+        style={{ width: 300 }}
+        InputProps={{
+            // inputRef: ref,
+            // classes: {
+            //     root: classes.inputRoot,
+            // },
+            ...InputProps,
+        }}
+        {...other}
+    />
 );
 
 const renderSuggestion = ({ suggestion, index, itemProps, highlightedIndex, selectedItem }) => {
@@ -54,15 +55,13 @@ renderSuggestion.propTypes = {
 };
 
 const fetchSuggestions = input => {
-    const text = input ? input.trim() : '';
-    if (!text) {
-        return;
+    if (!input) {
+        return new Promise((resolve, reject) => resolve([]));
     }
 
-    console.log('getSuggestions text ', text);
     const apiUrl = 'https://api.mobicoop.io/addresses';
     const parameters = {
-        q: `${text}`,
+        q: `${input}`,
     };
     const urlWithParameters = `${apiUrl}/search?${queryString.stringify(parameters)}`;
     return fetchUtils
@@ -81,73 +80,41 @@ const GeocompleteInput = props => {
     const [suggestions, setSuggestions] = useState([]);
     const debouncedInput = useDebounce(input, 200);
 
-    useEffect(
-        () => {
-            // Make sure we have a value (user has entered something in input)
-            if (debouncedInput) {
-                fetchSuggestions(debouncedInput).then(results => {
-                    setSuggestions(results.slice(0, 5));
-                });
-            } else {
-                setSuggestions([]);
-            }
-        },
-        // This is the useEffect input array
-        // Our useEffect function will only execute if this value changes ...
-        // ... and thanks to our hook it will only change if the original ...
-        // value (searchTerm) hasn't changed for more than 500ms.
-        [debouncedInput],
-    );
-    /*
-addressCountry: "France"
-addressLocality: "Nancy"
-countryCode: "FRA"
-county: "Nancy"
-createdDate: null
-displayLabel: "4 Rue Girardet, Nancy"
-elevation: null
-geoJson: null
-home: null
-houseNumber: "4"
-id: 999999999999
-latitude: "48.693464"
-localAdmin: "Nancy"
-longitude: "6.186733"
-macroCounty: "arrondissement de Nancy"
-macroRegion: "Grand Est"
-name: null
-postalCode: null
-region: "Meurthe-et-Moselle"
-relayPoint: null
-street: "Rue Girardet"
-streetAddress: "4 Rue Girardet"
-subLocality: null
-updatedDate: null
-venue: null
- */
+    useEffect(() => {
+        if (debouncedInput) {
+            fetchSuggestions(debouncedInput).then(results => {
+                setSuggestions(results.slice(0, 5));
+            });
+        } else {
+            setSuggestions([]);
+        }
+    }, [debouncedInput]);
+
     return (
         <FormDataConsumer>
-            {({ formData, dispatch, ...rest }) => (
+            {({ dispatch, ...rest }) => (
                 <div className={classes.root}>
                     <Downshift
                         id="downshift-simple"
-                        onInputValueChange={(inputValue, stateOnHelper) => setInput(inputValue)}
+                        onInputValueChange={(inputValue, stateAndHelperss) =>
+                            setInput(inputValue ? inputValue.trim() : '')
+                        }
                         onSelect={(selectedItem, stateAndHelpers) => {
                             const address = suggestions.find(
                                 element => element.displayLabel === selectedItem,
                             );
-                            // console.log('address', address);
-                            // console.log('suggestions', suggestions);
-                            dispatch(change(REDUX_FORM_NAME, 'address', address.streetAddress));
-                            dispatch(change(REDUX_FORM_NAME, 'zipcode', address.postalCode));
-                            dispatch(change(REDUX_FORM_NAME, 'city', address.addressLocality));
+                            if (address) {
+                                // dispatch here the fields you want to store in the react-admin model
+                                dispatch(change(REDUX_FORM_NAME, 'address', address.streetAddress));
+                                dispatch(change(REDUX_FORM_NAME, 'zipcode', address.postalCode));
+                                dispatch(change(REDUX_FORM_NAME, 'city', address.addressLocality));
+                            }
                         }}
                     >
                         {({
                             getInputProps,
                             getItemProps,
                             isOpen,
-                            inputValue,
                             selectedItem,
                             highlightedIndex,
                         }) => (
