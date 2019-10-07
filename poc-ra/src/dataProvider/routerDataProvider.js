@@ -5,10 +5,7 @@ const queryString = require('query-string');
 
 export const routerDataProvider = (type, resource, params) => {
     console.log(`routerDataProvider type=${type}, resource=${resource}, params`, params);
-    if (type === 'UPDATE' && resource === 'customers') {
-        sigDataProvider(type, params);
-        // autocompleteSigDataProvider(type, params);
-    }
+
     if (type === 'GET_LIST' && resource === 'customers_last_name') {
         const res = dataProvider(type, 'customers', params);
         return res
@@ -27,6 +24,10 @@ export const routerDataProvider = (type, resource, params) => {
             .catch(error => console.log('should not be there', error));
     }
 
+    if (resource === 'mobicoop-addresses') {
+        return autocompleteSigDataProvider(type, resource, params);
+    }
+
     // for other request types and resources, fall back to the default request handler
     return dataProvider(type, resource, params);
 };
@@ -43,52 +44,26 @@ const httpClient = (url, options = {}) => {
 
 const dataProvider = jsonServerProvider('https://json-server-now.pemoreau.now.sh', httpClient);
 
-const sigDataProvider = (type, params) => {
-    const { address, city, zipcode } = params.data;
-    const {
-        address: previousAddress,
-        city: previousCity,
-        zipcode: previousZipcode,
-    } = params.previousData;
-    if (address !== previousAddress || city !== previousCity || zipcode !== previousZipcode) {
-        if (address !== previousAddress) {
-            console.log('address changed', address, previousAddress);
-        }
-        if (city !== previousCity) {
-            console.log('city changed', city, previousCity);
-        }
-        if (zipcode !== previousZipcode) {
-            console.log('zipcode changed', zipcode, previousZipcode);
-        }
-    } else {
-        console.log('nothing changed');
-    }
+const autocompleteSigDataProvider = (type, resource, params) => {
+    console.log('autocompleteSigDataProvider', type, resource, params);
 
-    const apiUrl = 'https://nominatim.openstreetmap.org';
+    // const { text } = params.data;
+    const text = '4 rue Girardet';
+    const apiUrl = 'https://api.mobicoop.io/addresses';
+    // const apiUrl = 'https://api.maptiler.com/geocoding';
+    // const apiUrl = 'https://search.osmnames.org/q';
+
     const parameters = {
-        q: `${address ? address : ''} ${city ? city : ''} ${zipcode ? zipcode : ''}`,
-        format: 'json',
-        addressdetails: 1,
+        q: `${text}`,
     };
     const urlWithParameters = `${apiUrl}/search?${queryString.stringify(parameters)}`;
-
-    fetchUtils.fetchJson(urlWithParameters).then(response => {
-        console.log('sigDataProvider', response);
-    });
-};
-
-const autocompleteSigDataProvider = (type, params) => {
-    const { address, city, zipcode } = params.data;
-
-    const apiUrl = 'https://api.maptiler.com/geocoding';
-    // const apiUrl = 'https://search.osmnames.org/q';
-    const text = `${address ? address : ''} ${city ? city : ''} ${zipcode ? zipcode : ''}`;
-    const urlWithParameters = `${apiUrl}/${text}.json?key=U81nFAGbhcKWYfQhC41p`;
-
-    // fetchUtils.fetchJson(urlWithParameters).then(response => {
-    //     console.log('autocompleteSigDataProvider', response);
-    // });
-    fetchUtils.fetchJson(urlWithParameters).then(response => {
-        console.log('autocompleteSigDataProvider', response);
-    });
+    // return dataProvider(type, 'commands', params);
+    return fetchUtils
+        .fetchJson(urlWithParameters)
+        .then(response => {
+            const data = response.json;
+            console.log('autocompleteAddress', data);
+            return new Promise((resolve, reject) => resolve({ data, total: data.length }));
+        })
+        .catch(error => console.log('should not be there', error));
 };
